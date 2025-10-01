@@ -6,19 +6,11 @@
 
 На вход модуля каждый так подается число $x$.
 
-$$
-    \begin{equation}
-    a^2 + b^2 = c^2 \label{eq:pythagoras}
-    \end{equation}
-$$
-
-Reference: \eqref{eq:pythagoras}
-
 Необходимо вычислить:
 
 $$
 y_{n+1} = a \bullet y_n + b \bullet x_n
-\tag{1}
+\text{          (1)}
 $$
 
 Операция умноженя занимает 2 такта!!!
@@ -46,7 +38,7 @@ $y_0$, $a$ и $b$ - константы, зашитые в железо (в ко�
 
 $$
 y_{n+1}=a \bullet y_n + b \bullet x_n = a \bullet (a \bullet y_{n-1} + b \bullet x_{n-1}) + b \bullet x_n = a^2 \bullet y_{n-1} + ab \bullet x_{n-1} + b \bullet x_n
-\tag{2}
+\text{      (2)}
 $$
 
 При этом, в полученном выражении $a^2$ и $ab$ - константы, вычисление которых можно вынести за пределеы алгоритма.
