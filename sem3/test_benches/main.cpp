@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
     Verilated::traceEverOn(true);
     auto tfp = std::make_unique<VerilatedVcdC>();
     dut->trace(tfp.get(), 99);
-    tfp->open("ctr.vcd");
+    tfp->open("main.vcd");
 
     // Initialize signals
     dut->clk = 1;

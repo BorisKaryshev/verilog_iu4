@@ -86,7 +86,7 @@ void generate_example_vcd(std::uint64_t num) {
     Verilated::traceEverOn(true);
     auto tfp = std::make_unique<VerilatedVcdC>();
     dut->trace(tfp.get(), 99);
-    tfp->open("division_by_three.vcd");
+    tfp->open("main.vcd");
 
     // Initialize signals
     dut->clk = 0;
