@@ -1,0 +1,4 @@
+verilator_example
+build
+*.vcd
+.cache
