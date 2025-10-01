@@ -8,7 +8,10 @@
 
 Необходимо вычислить:
 
-$$y_{n+1} = a \bullet y_n + b \bullet x_n \tag{1}$$
+$$
+y_{n+1} = a \bullet y_n + b \bullet x_n
+\tag{1}
+$$
 
 Операция умноженя занимает 2 такта!!!
 
@@ -33,9 +36,10 @@ $y_0$, $a$ и $b$ - константы, зашитые в железо (в ко�
 
 Преобразуем заданное для вычислений уравнение, подставив в $y{n+1}$ значение от $y_{n}$:
 
-$$y_{n+1}=a \bullet y_n + b \bullet x_n =
-    a \bullet (a \bullet y_{n-1} + b \bullet x_{n-1}) + b \bullet x_n
-        = a^2 \bullet y_{n-1} + ab \bullet x_{n-1} + b \bullet x_n \tag{2}$$
+$$
+y_{n+1}=a \bullet y_n + b \bullet x_n = a \bullet (a \bullet y_{n-1} + b \bullet x_{n-1}) + b \bullet x_n = a^2 \bullet y_{n-1} + ab \bullet x_{n-1} + b \bullet x_n
+\tag{2}
+$$
 
 При этом, в полученном выражении $a^2$ и $ab$ - константы, вычисление которых можно вынести за пределеы алгоритма.
 Таким образом, они будут "зашиты" в железо так же, как и константы $a$ и $b$.
