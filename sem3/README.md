@@ -6,6 +6,14 @@
 
 На вход модуля каждый так подается число $x$.
 
+$$
+    \begin{equation}
+    a^2 + b^2 = c^2 \label{eq:pythagoras}
+    \end{equation}
+$$
+
+Reference: \eqref{eq:pythagoras}
+
 Необходимо вычислить:
 
 $$
