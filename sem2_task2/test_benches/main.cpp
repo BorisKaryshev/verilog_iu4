@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
 
     std::vector<std::uint64_t> numbers_to_print = {0, 1, 2, 3, 4, 9, 127, 128, 300, 30001, 3000003};
     std::cout << "Pringing some test results." << std::endl;
-    std::cout << "Format: number, is_dividable_by_three_cpp, is_dividable_by_three_verilog" << std::endl;
+    std::cout << "Format: number, is_dividable_by_three, is_dividable_by_three_verilog" << std::endl;
 
     for(auto num : numbers_to_print) {
         std::cout
