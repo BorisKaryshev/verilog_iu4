@@ -1,4 +1,5 @@
 verilator_example
+latex_template
 build
 *.vcd
 .cache
