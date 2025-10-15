@@ -13,10 +13,10 @@ set(
 )
 set(source
     ${PROJECT_SOURCE_DIR}/src/main.v
-    ${PROJECT_SOURCE_DIR}/src/naive_solver.v
-    ${PROJECT_SOURCE_DIR}/src/solver.v
     ${PROJECT_SOURCE_DIR}/src/multiplier.v
     ${PROJECT_SOURCE_DIR}/src/constants.v
+    ${PROJECT_SOURCE_DIR}/src/solver.v
+    ${PROJECT_SOURCE_DIR}/src/naive_solver.v
 )
 
 set(tb_source
