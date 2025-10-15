@@ -2,79 +2,85 @@
 
 module main (
     input clk,
-    input rst,
+    input rst_n,
     input [7:0] x,
     output [7:0] out,
     output has_result
 );
 
-// odd - нечетный
-// even - четный
 
-reg [7:0] x_prev;
-reg [7:0] y_zero = `Y_0_CONSTANT;
+reg [7:0] odd_y; // Нечетное
+reg [7:0] even_y; // Четное
+reg [7:0] prev_x;
+reg is_odd;
 
-wire [7:0] odd_y;
-
-reg has_first_result;
-wire [7:0] even_y;
-
-wire first_solver_has_result;
-wire [7:0] first_solver_result;
-wire first_solver_clk = clk && ~first_solver_has_result;
-naive_solver first_solver(
-    .clk(first_solver_clk),
-    .y(y_zero),
+reg odd_delay;
+wire odd_enable_input = (is_odd && odd_delay);
+/* verilator lint_off UNUSEDSIGNAL */
+wire odd_has_result;
+/* verilator lint_on UNUSEDSIGNAL */
+solver odd_solv (
+    .clk(clk),
+    .rst_n(rst_n),
+    .enable_input(odd_enable_input),
     .x(x),
-    .rst(rst),
-    .out(first_solver_result),
-    .has_result(first_solver_has_result)
-);
-
-wire odd_solver_has_result;
-wire [7:0] odd_solver_result;
-reg odd_can_run;
-wire odd_solver_clk = clk && odd_can_run;;
-solver odd_solver(
-    .clk(odd_solver_clk),
-    .rst(rst),
+    .x_prev(prev_x),
     .y_prev(odd_y),
-    .x(x),
-    .x_prev(x_prev),
-    .out(odd_solver_result),
-    .has_result(odd_solver_has_result)
+    .out(odd_y),
+    .has_result(odd_has_result)
 );
 
-wire even_solver_has_result;
-wire [7:0] even_solver_result;
-wire even_solver_clk = clk && first_solver_has_result;;
-solver even_solver(
-    .clk(even_solver_clk),
-    .rst(rst),
+wire first_has_result;
+wire first_enable = (!is_odd) && (!first_has_result);
+wire first_clk = clk && !first_has_result;
+reg [7:0] first_y;
+naive_solver first_solver(
+    .clk(first_clk),
+    .rst_n(rst_n),
+    .enable_input(first_enable),
+    .x(x),
     .y_prev(even_y),
-    .x(x),
-    .x_prev(x_prev),
-    .out(even_solver_result),
-    .has_result(even_solver_has_result)
+    .out(first_y),
+    .has_result(first_has_result)
 );
 
-assign has_result = first_solver_has_result || odd_solver_has_result || even_solver_has_result;
-assign even_y = (~even_solver_has_result) ? y_zero : even_solver_result;
-assign odd_y = (~odd_solver_has_result) ? odd_solver_result : first_solver_result;
+wire even_enable_input = (!is_odd && first_has_result);
+/* verilator lint_off UNUSEDSIGNAL */
+wire even_has_result;
+/* verilator lint_on UNUSEDSIGNAL */
+reg read_first_result;
+wire [7:0] even_input = (read_first_result) ? (first_y) : (even_y);
+solver even_solv (
+    .clk(clk),
+    .rst_n(rst_n),
+    .enable_input(even_enable_input),
+    .x(x),
+    .x_prev(prev_x),
+    .y_prev(even_input),
+    .out(even_y),
+    .has_result(even_has_result)
+);
 
-reg is_current_odd;
-assign out = (is_current_odd) ? odd_y : even_y;
+assign has_result = (first_has_result || odd_has_result || even_has_result);
+assign out = (is_odd) ? (odd_y) : (
+    (read_first_result) ? (first_y) : (even_y)
+);
 
-always @ (posedge clk) begin
-    if (!rst) begin // Active-low reset
-        x_prev <= 0;
-        odd_can_run <= 0;
-        is_current_odd <= 1;
+always @ (posedge clk or negedge rst_n) begin
+    if (!rst_n) begin // Active-low reset
+        is_odd <= 0;
+        prev_x <= 0;
+        odd_delay <= 0;
+        read_first_result <= 1;
+        // odd_y <= `Y_0_CONSTANT;
+        // even_y <= `Y_0_CONSTANT;
     end else begin
-        is_current_odd <= ~is_current_odd;
-        x_prev <= x;
-        odd_can_run <= 1;
-        has_first_result <= first_solver_has_result || has_first_result;
+        if(even_enable_input) begin
+            read_first_result <= 0;
+        end
+        odd_delay <= 1;
+        is_odd <= ~is_odd;
+        prev_x <= x;
     end
 end
 
