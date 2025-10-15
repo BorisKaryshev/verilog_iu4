@@ -1,83 +1,81 @@
-`include "solver.v"
-`include "naive_solver.v"
-
+`include "constants.v"
 
 module main (
     input clk,
     input rst,
     input [7:0] x,
-    output reg [7:0] out
+    output [7:0] out,
+    output has_result
 );
 
-reg is_current_input_odd;
+// odd - нечетный
+// even - четный
 
-reg read_odd;
-reg read_even;
+reg [7:0] x_prev;
+reg [7:0] y_zero = `Y_0_CONSTANT;
 
-reg [7:0] even_x;
-reg [7:0] odd_x;
+wire [7:0] odd_y;
 
-reg [7:0] even_y; // Четный
-reg [7:0] odd_y;  // Нечетный
+reg has_first_result;
+wire [7:0] even_y;
 
-solver even_solver(
-    .clk(clk),
-    .rst(rst),
-    .y_minus_one(even_y),
-    .x_minus_one(odd_x),
-    .x(x),
-    .read_input(read_even),
-    .out(even_y)
-);
-
-solver odd_solver(
-    .clk(clk),
-    .rst(rst),
-    .y_minus_one(odd_y),
-    .x_minus_one(even_x),
-    .x(x),
-    .read_input(read_odd),
-    .out(odd_y)
-);
-
-reg [7:0] first_y;
+wire first_solver_has_result;
+wire [7:0] first_solver_result;
+wire first_solver_clk = clk && ~first_solver_has_result;
 naive_solver first_solver(
-    .clk(clk),
-    .rst(rst),
-    .y_minus_one(odd_y),
+    .clk(first_solver_clk),
+    .y(y_zero),
     .x(x),
-    .out(first_y)
+    .rst(rst),
+    .out(first_solver_result),
+    .has_result(first_solver_has_result)
 );
 
-reg [2:0] is_begining_of_sequence_ready; // Then this var equals mul delay + 1 it is ready. So then == 2'b11
+wire odd_solver_has_result;
+wire [7:0] odd_solver_result;
+reg odd_can_run;
+wire odd_solver_clk = clk && odd_can_run;;
+solver odd_solver(
+    .clk(odd_solver_clk),
+    .rst(rst),
+    .y_prev(odd_y),
+    .x(x),
+    .x_prev(x_prev),
+    .out(odd_solver_result),
+    .has_result(odd_solver_has_result)
+);
+
+wire even_solver_has_result;
+wire [7:0] even_solver_result;
+wire even_solver_clk = clk && first_solver_has_result;;
+solver even_solver(
+    .clk(even_solver_clk),
+    .rst(rst),
+    .y_prev(even_y),
+    .x(x),
+    .x_prev(x_prev),
+    .out(even_solver_result),
+    .has_result(even_solver_has_result)
+);
+
+assign has_result = first_solver_has_result || odd_solver_has_result || even_solver_has_result;
+assign even_y = (~even_solver_has_result) ? y_zero : even_solver_result;
+assign odd_y = (~odd_solver_has_result) ? odd_solver_result : first_solver_result;
+
+reg is_current_odd;
+assign out = (is_current_odd) ? odd_y : even_y;
 
 always @ (posedge clk) begin
     if (!rst) begin // Active-low reset
-        is_current_input_odd <= 0;
-        even_x <= 0;
-        odd_x <= 0;
-        is_begining_of_sequence_ready <= 0;
+        x_prev <= 0;
+        odd_can_run <= 0;
+        is_current_odd <= 1;
     end else begin
-        is_current_input_odd <= ~is_current_input_odd;
-        if(is_begining_of_sequence_ready != 3'b100) begin
-            read_even <= 0;
-            read_odd <= 0;
-            is_begining_of_sequence_ready <= is_begining_of_sequence_ready + 3'b001;
-        end else if (odd_y == 0) begin
-            read_even <= ~is_current_input_odd;
-            read_odd <= is_current_input_odd;
-            odd_y <= first_y;
-        end
-
-        if(is_current_input_odd) begin
-            odd_x <= x;
-            out <= odd_y;
-        end else begin
-            even_x <= x;
-            out <= even_y;
-        end
+        is_current_odd <= ~is_current_odd;
+        x_prev <= x;
+        odd_can_run <= 1;
+        has_first_result <= first_solver_has_result || has_first_result;
     end
-
 end
 
 endmodule

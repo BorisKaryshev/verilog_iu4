@@ -1,2 +1,3 @@
-`define A 8'b00000001
-`define B 8'b00000001
+`define A_CONSTANT 8'b00000001
+`define B_CONSTANT 8'b00000001
+`define Y_0_CONSTANT 8'b00000001
