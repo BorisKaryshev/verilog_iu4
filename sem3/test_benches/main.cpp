@@ -3,6 +3,7 @@
 // #include <Vmultiplier.h>
 #include <Vmain.h>
 
+#include <execution>
 #include <iomanip>
 #include <iostream>
 #include <chrono>
@@ -16,9 +17,11 @@
 
 constexpr uint8_t A = 1;
 constexpr uint8_t B = 1;
-constexpr uint64_t N_OF_TESTS = 100;
-constexpr uint64_t MAX_SEQ_SIZE = 1000;
-constexpr int CYCLES = 1000;
+constexpr uint64_t N_OF_TESTS = 10;
+constexpr uint64_t N_OF_SEQ_SIZES = std::pow(10, 3);
+constexpr uint64_t MAX_SEQ_SIZE = std::pow(10, 5);
+constexpr int CYCLES_LIMIT = std::pow(10, 7);
+constexpr int CYCLES_FOR_VCD = 20 * std::pow(10, 3);
 constexpr int CLK_STEP_PS = 1;
 
 template <typename T>
@@ -53,39 +56,12 @@ std::vector<int> decimalToBinaryVector(long long int decimal_number) {
 }
 
 
-std::vector<uint8_t> run_module_over_numbers(const std::vector<uint8_t>& numbers) {
-    auto module = std::make_unique<Vmain>();
-
-    auto x_it = numbers.begin();
-
-    module->clk = 1;
-    module->rst = 1;
-    module->x = *x_it;
-
-    std::vector<uint8_t> result;
-    bool is_finished = false;
-    uint64_t cycles = CYCLES;
-    while(!is_finished && cycles > 0) {
-        module->clk = !module->clk;
-        if(module->clk && x_it != numbers.end()) {
-            module->x = *x_it;
-            x_it = std::next(x_it);
-        }
-        if(module->clk && module->has_result) {
-            result.push_back(module->out);
-        }
-        is_finished = (result.size() >= numbers.size() + 1);
-        cycles--;
-    }
-    return result;
-}
-
 std::pair<std::vector<uint8_t>, std::vector<uint8_t>> generate_correct_sequence(uint64_t n_of_input_elements) {
     std::vector<uint8_t> input_seq;
 
     std::default_random_engine generator(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     uint8_t min = 0;
-    uint8_t max = 255;
+    uint8_t max = 10;
     std::uniform_int_distribution<uint8_t> distribution(min, max);
 
     for(uint64_t i = 0; i < n_of_input_elements; i++) {
@@ -103,28 +79,35 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> generate_correct_sequence(
 std::vector<uint8_t> test_sequence(const std::vector<uint8_t>& input) {
     auto module = std::make_unique<Vmain>();
     module->clk = 1;
-    module->rst = 1;
+    module->rst_n = 1;
 
     auto x_it = input.begin();
+    module->clk = 1;
+    module->rst_n = 1;
     module->x = *x_it;
+
     module->eval();
+    module->rst_n = 0;
 
+    std::vector<uint8_t> result {0};
     bool is_finished = false;
-
-    std::vector<uint8_t> res;
-    uint64_t cycles = CYCLES;
-    while(!is_finished && cycles > 0) {
-        module->clk = !module->clk;
-        module->eval();
-
-        if(module->clk && x_it != input.end()) {
+    for (int i = 0; i < CYCLES_LIMIT && !is_finished; i++) {
+        if(i > 1) {
+            module->rst_n = 1;
+        }
+        module->clk = (i % 2);
+        if(module->clk && module->rst_n && x_it != input.end()) {
             module->x = *x_it;
             x_it = std::next(x_it);
         }
-        is_finished = (res.size() >= input.size() + 1);
+        module->eval();
+
+        if(module->has_result && module->clk) {
+            result.push_back(module->out);
+        }
+        is_finished = (result.size() == (input.size() + 1));
     }
-    cycles--;
-    return res;
+    return result;
 }
 
 std::vector<uint8_t> create_example_vcd(const std::vector<uint8_t>& numbers) {
@@ -138,28 +121,29 @@ std::vector<uint8_t> create_example_vcd(const std::vector<uint8_t>& numbers) {
 
     auto x_it = numbers.begin();
     module->clk = 1;
-    module->rst = 0;
+    module->rst_n = 1;
     module->x = *x_it;
 
     module->eval();
     tfp->dump(0);
+    module->rst_n = 0;
 
     std::vector<uint8_t> result;
-    bool is_finished = false;
-    for (int i = 0; i < CYCLES && !is_finished; i++) {
-        module->rst = 1;
+    for (int i = 0; i < CYCLES_FOR_VCD; i++) {
+        if(i > 1) {
+            module->rst_n = 1;
+        }
         module->clk = (i % 2);
-        if(module->clk && module->rst && x_it != numbers.end()) {
+        if(module->clk && module->rst_n && x_it != numbers.end()) {
             module->x = *x_it;
             x_it = std::next(x_it);
         }
         module->eval();
         tfp->dump(i * CLK_STEP_PS + CLK_STEP_PS);  // Trace at mid-cycle
 
-        if(module->has_result && module->clk) {
+        if(module->has_result && module->clk && result.size() < (numbers.size())) {
             result.push_back(module->out);
         }
-        is_finished = (result.size() >= numbers.size() + 1);
     }
 
     // Cleanup
@@ -170,59 +154,71 @@ std::vector<uint8_t> create_example_vcd(const std::vector<uint8_t>& numbers) {
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
 
-    {
-        auto [in, _] = generate_correct_sequence(10);
-        create_example_vcd(in);
+    const uint64_t seq_size_step = std::max(static_cast<uint64_t>(1), static_cast<uint64_t>(MAX_SEQ_SIZE / N_OF_SEQ_SIZES));
+    std::cout << "Running test for " << N_OF_TESTS << " random sequeces with sizes from 1 to " << MAX_SEQ_SIZE << " with step " << seq_size_step << std::endl;
+    int barWidth = 70;
+    for(std::uint64_t i = 1; i < N_OF_TESTS; i++) {
+        for(std::uint64_t j = i; j < MAX_SEQ_SIZE; j += seq_size_step) {
+            auto [in, expected] = generate_correct_sequence(j);
+            auto result = test_sequence(in);
+            assert(expected.size() == result.size());
+            for(uint64_t i = 0; i < expected.size(); i++) {
+                assert(expected[i] == result[i]);
+            }
+        }
+
+        float progress = static_cast<float>(i) / static_cast<float>(N_OF_TESTS);
+
+        std::cout << "[";
+        int pos = barWidth * progress;
+        for (int i = 0; i < barWidth; ++i) {
+            if (i < pos) std::cout << "=";
+            else if (i == pos) std::cout << ">";
+            else std::cout << " ";
+        }
+        std::cout << "] " << int(progress * 100.0) << " %\r";
+        std::cout.flush();
+
+        progress += 0.16; // for demonstration only
     }
+    for (int i = 0; i < barWidth + 20; i++) {
+        std::cout << ' ';
+    }
+    std::cout.flush();
+    std::cout << "\r" << "Success!" << std::endl << std::endl;
 
-    // std::cout << "Running test for " << N_OF_TESTS << " random sequeces with sizes from 1 to " << MAX_SEQ_SIZE << "(step " << MAX_SEQ_SIZE / N_OF_TESTS << ")" << std::endl;
-    //
-    // int barWidth = 70;
-    // uint64_t curr_seq_size = 1;
-    // for(std::uint64_t i = 0; i < N_OF_TESTS; i += 1, curr_seq_size += MAX_SEQ_SIZE/N_OF_TESTS) {
-    //     auto [in, expected] = generate_correct_sequence(curr_seq_size);
-    //     auto result = test_sequence(in);
-    //     assert(expected.size() == result.size());
-    //     for(uint64_t i = 0; i < expected.size(); i++) {
-    //         assert(expected[i] == result[i]);
-    //     }
-    //
-    //     float progress = static_cast<float>(i) / static_cast<float>(N_OF_TESTS);
-    //
-    //     std::cout << "[";
-    //     int pos = barWidth * progress;
-    //     for (int i = 0; i < barWidth; ++i) {
-    //         if (i < pos) std::cout << "=";
-    //         else if (i == pos) std::cout << ">";
-    //         else std::cout << " ";
-    //     }
-    //     std::cout << "] " << int(progress * 100.0) << " %\r";
-    //     std::cout.flush();
-    //
-    //     progress += 0.16; // for demonstration only
-    // }
-    // for (int i = 0; i < barWidth + 20; i++) {
-    //     std::cout << ' ';
-    // }
-    // std::cout.flush();
-    // std::cout << "\r" << "Success!" << std::endl << std::endl;
+    std::cout << "Running test for large sequence with 1.000.000 elements" << std::endl;
+    {
+        auto [in, expected] = generate_correct_sequence(1000000);
+        auto result = test_sequence(in);
+        assert(expected.size() == result.size());
+        for(uint64_t i = 0; i < expected.size(); i++) {
+            assert(expected[i] == result[i]);
+        }
+    }
+    std::cout << "Success!" << std::endl << std::endl;
 
-    // std::vector<uint8_t> input_seq = {0, 1, 2, 3, 5, 7, 12};
-    // std::vector<uint8_t> expected = {0};
-    // for(auto i : input_seq) {
-    //     expected.push_back(
-    //         A * expected.back() + B * i
-    //     );
-    // }
-    // auto result = test_sequence(input_seq);
-    // std::cout << "Pringing some test results." << std::endl;
-    // std::cout << "Format: x, expected, result" << std::endl;
-    //
-    // for(uint64_t i = 0; i < std::max(expected.size(), result.size()); i++) {
-    //     std::cout << vector_get(input_seq, i, "   ") << " "
-    //         << vector_get(expected, i, "   ") << " "
-    //         << vector_get(result, i, "   ") << std::endl;
-    // }
+    std::vector<uint8_t> input_seq = {0, 1, 2, 3, 5, 7, 12};
+    std::vector<uint8_t> expected = {0};
+    for(auto i : input_seq) {
+        expected.push_back(
+            A * expected.back() + B * i
+        );
+    }
+    auto result = test_sequence(input_seq);
+    std::cout << "Pringing some test results." << std::endl;
+    std::cout << "Format:" << std::endl << "x\tgot\texpected" << std::endl;
+
+    for(uint64_t i = 0; i < std::max(expected.size(), result.size()); i++) {
+        std::stringstream stream;
+        if(i < input_seq.size()) {
+            stream << static_cast<int>(input_seq[i]);
+        } else {
+            stream << '-';
+        }
+        std::cout << stream.str() << '\t' << static_cast<int>(result[i]) << '\t' << static_cast<int>(expected[i]) << std::endl;
+    }
+    create_example_vcd(input_seq);
 
     return 0;
 }
