@@ -1,15 +1,8 @@
-// #include "Vctr.h"
-// #include "Vcounter.h"
-// #include <Vmultiplier.h>
 #include <Vmain.h>
 
-#include <algorithm>
-#include <iterator>
-#include <limits>
 #include <memory>
-#include <iostream>
+#include <vector>
 
-#include <tuple>
 #include <verilated.h>
 #include <verilated_vcd_c.h>
 
@@ -32,12 +25,15 @@ void generate_vcd_example() {
     module->trace(tfp.get(), 99);
     tfp->open("main.vcd");
 
+
+    std::vector<uint8_t> data = {
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 3, 3, 3, 4, 2, 1
+    };
+
     // Initialize signals
     module->clk = 1;
     module->rst = 0;
-    int x = 0;
-    module->onehot_in = 1 << x;
-
+    auto it = data.begin();
 
     // Reset cycle
     module->eval();
@@ -45,9 +41,9 @@ void generate_vcd_example() {
 
     // Run simulation for 30 clock cycles
     for (int i = 0; i < CYCLES; i++) {
-        if(!module->clk && module->rst) {
-            x = (x + 1) % 8;
-            module->onehot_in = 1 << x;
+        if(!module->clk && module->rst && it != data.end()) {
+            module->x = *it;
+            it = std::next(it);
         }
         if (i > 2) {
             module->rst = 1;
