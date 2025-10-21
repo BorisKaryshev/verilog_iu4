@@ -19,11 +19,8 @@ constexpr uint8_t CACHE_SIZE = 7;
 
 using DataType = uint8_t;
 
-inline char to_char(int var) {
-    return static_cast<char>(var + '0');
-}
-
-std::array<DataType, CACHE_SIZE> run_one_iteration_of_cache(std::array<DataType, CACHE_SIZE> data, DataType new_value) {
+namespace {
+std::array<DataType, CACHE_SIZE> RunOneIterationOfCache(std::array<DataType, CACHE_SIZE> data, DataType new_value) {
     auto it = std::ranges::find(data, new_value);
     if(it != data.begin()) {
         it++;
@@ -36,12 +33,12 @@ std::array<DataType, CACHE_SIZE> run_one_iteration_of_cache(std::array<DataType,
     return data;
 }
 
-std::vector<std::array<DataType, CACHE_SIZE>> get_correct_sequence(const std::vector<DataType>& data) {
+std::vector<std::array<DataType, CACHE_SIZE>> GetCorrectSequence(const std::vector<DataType>& data) {
     std::vector<std::array<DataType, CACHE_SIZE>> res;
     std::array<DataType, CACHE_SIZE> current_state {};
 
     for(auto i : data) {
-        current_state = run_one_iteration_of_cache(current_state, i);
+        current_state = RunOneIterationOfCache(current_state, i);
         res.push_back(current_state);
     }
 
@@ -58,6 +55,7 @@ std::vector<DataType> GenerateRandomSequence(uint64_t seq_size) {
         res.push_back(dist(rng));
     }
     return res;
+}
 }
 
 void generate_vcd_example(const std::vector<uint8_t> data) {
@@ -105,23 +103,27 @@ class TestLRUCacheModule : public testing::Test {
         module_ = nullptr;
     };
 
-    std::vector<std::array<DataType, CACHE_SIZE>> RunModule(const std::vector<DataType>& data) {
+
+    std::vector<std::array<DataType, CACHE_SIZE>> RunModuleWithEvalCallback(
+            const std::vector<DataType>& data,
+            auto callback
+    ) {
         std::vector<std::array<DataType, CACHE_SIZE>> res;
         module_->rst = 0;
         module_->clk = 1;
-        module_->eval();
+        callback(module_);
 
         module_->clk = 0;
         module_->rst = 1;
-        module_->eval();
+        callback(module_);
 
         for(auto i : data) {
             module_->clk = 1;
             module_->x = i;
-            module_->eval();
+            callback(module_);
 
             module_->clk = 0;
-            module_->eval();
+            callback(module_);
 
             std::array<DataType, CACHE_SIZE> current {};
             std::ranges::copy(module_->cache, current.begin());
@@ -131,14 +133,20 @@ class TestLRUCacheModule : public testing::Test {
         return res;
     }
 
- private:
+    std::vector<std::array<DataType, CACHE_SIZE>> RunModule(const std::vector<DataType>& data) {
+        return RunModuleWithEvalCallback(data, [](auto& module){
+            module->eval();
+        });
+    }
+
+ protected:
     std::unique_ptr<Vmain> module_;
 
 };
 
 TEST_F(TestLRUCacheModule, TestWithOnes) {
     std::vector<DataType> input(1000, 1);
-    auto expected = get_correct_sequence(input);
+    auto expected = GetCorrectSequence(input);
     auto result = RunModule(input);
 
     ASSERT_EQ(expected, result);
@@ -146,7 +154,7 @@ TEST_F(TestLRUCacheModule, TestWithOnes) {
 
 TEST_F(TestLRUCacheModule, TestWithZeros) {
     std::vector<DataType> input(1000, 0);
-    auto expected = get_correct_sequence(input);
+    auto expected = GetCorrectSequence(input);
     auto result = RunModule(input);
 
     ASSERT_EQ(expected, result);
@@ -154,7 +162,7 @@ TEST_F(TestLRUCacheModule, TestWithZeros) {
 
 TEST_F(TestLRUCacheModule, MiniTest) {
     std::vector<DataType> input {1, 2, 3, 4, 4, 2, 3, 1, 1, 4, 20, 43, 1};
-    auto expected = get_correct_sequence(input);
+    auto expected = GetCorrectSequence(input);
     auto result = RunModule(input);
 
     ASSERT_EQ(expected, result);
@@ -163,16 +171,28 @@ TEST_F(TestLRUCacheModule, MiniTest) {
 TEST_F(TestLRUCacheModule, LargeTestWithRandomNumbers) {
     for(uint64_t i = 0; i < TEST_ITERATIONS; i++) {
         auto input = GenerateRandomSequence(i);
-        auto expected = get_correct_sequence(input);
+        auto expected = GetCorrectSequence(input);
         auto result = RunModule(input);
 
         ASSERT_EQ(expected, result);
     }
 }
 
-TEST(Visual, CreateMainVcdFile) {
+TEST_F(TestLRUCacheModule, CreateMainVcdFile) {
     std::vector<DataType> data = {
-        1, 2, 3, 4, 5, 6, 7, 3, 3, 3, 4, 2, 1
+        1, 2, 3, 4, 5, 6, 7, 3, 3, 3, 4, 2, 1, 1, 1, 1, 1, 1
     };
-    generate_vcd_example(data);
+
+
+    Verilated::traceEverOn(true);
+    auto tfp = std::make_unique<VerilatedVcdC>();
+    module_->trace(tfp.get(), 99);
+    tfp->open("main.vcd");
+
+    uint64_t simulation_step = 0;
+    RunModuleWithEvalCallback(data, [&simulation_step, &tfp](auto& module) {
+        module->eval();
+        tfp->dump(CLK_STEP_PS * simulation_step);
+        simulation_step++;
+    });
 }

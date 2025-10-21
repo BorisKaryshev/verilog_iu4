@@ -1,3 +1,7 @@
 #!/usr/bin/bash
 
-apt update && apt install -y verilator
+set -eou pipefail
+set -x
+
+apt update
+apt install -y make cmake g++ verilator
