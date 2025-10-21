@@ -1,8 +1,7 @@
 module main #(
-    parameter CACHE_SIZE = 8,
+    parameter CACHE_SIZE = 7,
     parameter VAR_WIDTH = 8
 ) (
-    /* verilator lint_off UNUSEDSIGNAL */
     input clk,
     input rst,
     input [VAR_WIDTH - 1:0] x,
@@ -12,18 +11,28 @@ module main #(
     wire [CACHE_SIZE - 1:0] encoder_in;
     wire [$clog2(CACHE_SIZE) - 1:0] encoder_out;
     encoder #(
-        .WIDTH(VAR_WIDTH)
+        .WIDTH(CACHE_SIZE)
     ) local_encoder (
         .onehot_in(encoder_in),
         .binary_out(encoder_out)
     );
-
 
     genvar i;
     generate
         for (i = 0; i < CACHE_SIZE; i = i + 1) begin : encoder_input_creation
             assign encoder_in[i] = (cache[i] == x);
         end
+    endgenerate
+
+    always @(posedge clk) begin
+        if(!rst) begin
+            cache[0] <= 0;
+        end else begin
+            cache[0] <= x;
+        end
+    end
+
+    generate
         for (i = 1; i < CACHE_SIZE - 1; i = i + 1) begin : cache_shift
             always @(posedge clk) begin
                 if(!rst) begin
@@ -34,6 +43,7 @@ module main #(
             end
         end
     endgenerate
+
     always @(posedge clk) begin
         if(!rst) begin
             cache[CACHE_SIZE - 1] <= 0;
@@ -41,14 +51,6 @@ module main #(
         end else if((encoder_in == 0) || encoder_out == (CACHE_SIZE - 1)) begin
 /* verilator lint_on WIDTHEXPAND */
             cache[CACHE_SIZE - 1] <= cache[CACHE_SIZE - 2];
-        end
-    end
-
-    always @(posedge clk) begin
-        if(!rst) begin
-            cache[0] <= 0;
-        end else begin
-            cache[0] <= x;
         end
     end
 
