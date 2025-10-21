@@ -46,13 +46,16 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     )
 endif()
 
+
 add_library(${project_name}_lib STATIC ${tb_source} ${libs})
 target_include_directories(${project_name}_lib PUBLIC ${include_locations})
+target_link_libraries(${project_name}_lib "${CMAKE_BINARY_DIR}/from_verilog.a")
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/libs/googletest)
 
 add_executable(exe ${PROJECT_SOURCE_DIR}/test_benches/main.cpp)
 target_link_libraries(exe ${project_name}_lib)
-
-target_link_libraries(exe "${CMAKE_BINARY_DIR}/from_verilog.a")
+target_link_libraries(exe gtest_main)
 
 target_compile_options(exe PRIVATE -O3)
 target_compile_options(${project_name}_lib PRIVATE -O3)
