@@ -7,6 +7,8 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v5
+      - name: Initialize and update submodules
+        run: git submodule update --init --recursive
       - run: |
           ls ${{ github.workspace }}
       - name: Setup verilator
