@@ -46,4 +46,4 @@ git submodule update --init
 ```
 Очистка удаляет артефакты сборки, скомпилированные бинари и vcd файлы.
 
-test
+test test
