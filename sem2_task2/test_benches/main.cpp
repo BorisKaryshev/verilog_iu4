@@ -1,15 +1,13 @@
-// #include "Vctr.h"
-// #include "Vcounter.h"
-// #include <Vmultiplier.h>
 #include <Vmain.h>
 
-#include <iomanip>
-#include <ios>
-#include <iostream>
 #include <memory>
+#include <vector>
+#include <cmath>
+#include <cstdint>
 
 #include <verilated.h>
 #include <verilated_vcd_c.h>
+#include <gtest/gtest.h>
 
 constexpr int CYCLES = 1000;
 constexpr int CLK_STEP_PS = 1;
@@ -127,32 +125,43 @@ void generate_example_vcd(std::uint64_t num) {
     tfp->close();
 }
 
-int main(int argc, char** argv) {
-    generate_example_vcd(NUMBER);
+class DivisibleByThreeTest : public ::testing::Test {
+};
 
-    std::uint64_t test_end = std::pow(10, 6);
+class DivisibleByThreeTestWithParametr : public ::testing::TestWithParam<int> {
+};
 
-    std::cout << "Running test for all numbers from 0 to " << test_end << std::endl;
+TEST_F(DivisibleByThreeTest, VcdGeneration) {
+    // This test generates the VCD file - we just verify it doesn't crash
+    ASSERT_NO_THROW(generate_example_vcd(NUMBER));
+}
 
-    for(std::uint64_t i = 0; i < test_end; i += 1) {
-        bool expected = ((i % 3) == 0);
-        assert(
-            test_number(i) == expected
-        );
+TEST_P(DivisibleByThreeTestWithParametr, RangeTest) {
+    bool expected = ((GetParam() % 3) == 0);
+    EXPECT_EQ(test_number(GetParam()), expected)
+        << "Failed for number: " << GetParam()
+        << ", expected: " << (expected ? "true" : "false")
+        << ", got: " << (test_number(GetParam()) ? "true" : "false");
+}
 
+INSTANTIATE_TEST_SUITE_P(
+    IterationTests,
+    DivisibleByThreeTestWithParametr,
+    ::testing::Range(0, 1000000),  // Test 1,000,000
+    [](const ::testing::TestParamInfo<DivisibleByThreeTestWithParametr::ParamType>& info) {
+        return "Iteration_" + std::to_string(info.param);
     }
-    std::vector<std::uint64_t> numbers_to_print = {0, 1, 2, 3, 4, 9, 127, 128, 300, 30001, 3000003};
-    std::cout << "Pringing some test results." << std::endl;
-    std::cout << "Format: number, is_dividable_by_three, is_dividable_by_three_verilog" << std::endl;
+);
 
-    for(auto num : numbers_to_print) {
-        std::cout
-            << std::left << std::setw(10) << std::setfill(' ') << num
-            << ' '
-            << convert_bool_to_stirng_with_padding((num % 3) == 0)
-            << ' '
-            << convert_bool_to_stirng_with_padding(test_number(num)) << std::endl;
+// Optional: Performance test for larger ranges
+TEST_F(DivisibleByThreeTest, PerformanceTest) {
+    std::vector<std::uint64_t> large_numbers = {1000000, 10000000, 100000000};
+
+    for(auto num : large_numbers) {
+        bool expected = (num % 3) == 0;
+        bool actual = test_number(num);
+
+        EXPECT_EQ(actual, expected)
+            << "Performance test failed for large number: " << num;
     }
-
-    return 0;
 }
