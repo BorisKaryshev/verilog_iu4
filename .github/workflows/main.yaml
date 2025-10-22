@@ -12,4 +12,4 @@ jobs:
       - name: Setup verilator
         run: sudo ./scripts/setup.sh
       - name: Build and run tasks
-        run: base_path=$(pwd) for path in $(echo sem*); cd $base_path/$path; cmake -B build -S .; cmake --build build; ./build/exe; done
+        run: ./scripts/run_tests.sh
