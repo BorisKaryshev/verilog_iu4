@@ -177,6 +177,7 @@ int main(int argc, char** argv) {
     }
     std::cout << "Success!" << std::endl << std::endl;
 
+    std::vector<uint8_t> input_seq = {0, 1, 2, 3, 5, 7, 12};
     create_example_vcd(input_seq);
 
     return 0;
