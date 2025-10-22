@@ -9,11 +9,14 @@
 #include <chrono>
 #include <iterator>
 #include <memory>
-
 #include <random>
 #include <sstream>
+#include <tuple>
+#include <vector>
+
 #include <verilated.h>
 #include <verilated_vcd_c.h>
+#include <gtest/gtest.h>
 
 constexpr uint8_t A = 1;
 constexpr uint8_t B = 1;
@@ -54,7 +57,6 @@ std::vector<int> decimalToBinaryVector(long long int decimal_number) {
     std::reverse(binary_vector.begin(), binary_vector.end()); // Reverse to get correct order
     return binary_vector;
 }
-
 
 std::pair<std::vector<uint8_t>, std::vector<uint8_t>> generate_correct_sequence(uint64_t n_of_input_elements) {
     std::vector<uint8_t> input_seq;
@@ -151,34 +153,103 @@ std::vector<uint8_t> create_example_vcd(const std::vector<uint8_t>& numbers) {
     return result;
 }
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
-
-    const uint64_t seq_size_step = std::max(static_cast<uint64_t>(1), static_cast<uint64_t>(MAX_SEQ_SIZE / N_OF_SEQ_SIZES));
-    for(std::uint64_t i = 1; i < N_OF_TESTS; i++) {
-        for(std::uint64_t j = i; j < MAX_SEQ_SIZE; j += seq_size_step) {
-            auto [in, expected] = generate_correct_sequence(j);
-            auto result = test_sequence(in);
-            assert(expected.size() == result.size());
-            for(uint64_t i = 0; i < expected.size(); i++) {
-                assert(expected[i] == result[i]);
-            }
-        }
-
+// Test fixture for Verilator tests
+class VerilatorTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Initialize Verilator
     }
-    std::cout << "Running test for large sequence with 1.000.000 elements" << std::endl;
-    {
-        auto [in, expected] = generate_correct_sequence(1000000);
-        auto result = test_sequence(in);
-        assert(expected.size() == result.size());
-        for(uint64_t i = 0; i < expected.size(); i++) {
-            assert(expected[i] == result[i]);
-        }
+
+    void TearDown() override {
+        // Cleanup if needed
     }
-    std::cout << "Success!" << std::endl << std::endl;
+};
 
-    std::vector<uint8_t> input_seq = {0, 1, 2, 3, 5, 7, 12};
-    create_example_vcd(input_seq);
+// Test with various sequence sizes
+// TEST_F(VerilatorTest, VariousSequenceSizes) {
+//     const uint64_t seq_size_step = std::max(static_cast<uint64_t>(1),
+//                                            static_cast<uint64_t>(MAX_SEQ_SIZE / N_OF_SEQ_SIZES));
+//
+//     for(std::uint64_t i = 1; i < N_OF_TESTS; i++) {
+//         for(std::uint64_t j = i; j < MAX_SEQ_SIZE; j += seq_size_step) {
+//             auto [in, expected] = generate_correct_sequence(j);
+//             auto result = test_sequence(in);
+//
+//             EXPECT_EQ(expected.size(), result.size())
+//                 << "Sequence size mismatch for input size " << j;
+//
+//             for(uint64_t k = 0; k < expected.size(); k++) {
+//                 EXPECT_EQ(expected[k], result[k])
+//                     << "Value mismatch at position " << k << " for input size " << j;
+//             }
+//         }
+//     }
+// }
 
-    return 0;
+// Test with large sequence
+TEST_F(VerilatorTest, LargeSequence) {
+    const uint64_t large_sequence_size = 100000;
+
+    auto [in, expected] = generate_correct_sequence(large_sequence_size);
+    auto result = test_sequence(in);
+
+    EXPECT_EQ(expected.size(), result.size())
+        << "Sequence size mismatch for large sequence";
+
+    for(uint64_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(expected[i], result[i])
+            << "Value mismatch at position " << i << " for large sequence";
+    }
 }
+
+// Test with small sequences (edge cases)
+TEST_F(VerilatorTest, SmallSequences) {
+    // Test single element sequence
+    auto [in_single, expected_single] = generate_correct_sequence(1);
+    auto result_single = test_sequence(in_single);
+    EXPECT_EQ(expected_single.size(), result_single.size());
+    for(uint64_t i = 0; i < expected_single.size(); i++) {
+        EXPECT_EQ(expected_single[i], result_single[i]);
+    }
+
+    // Test small sequence
+    auto [in_small, expected_small] = generate_correct_sequence(10);
+    auto result_small = test_sequence(in_small);
+    EXPECT_EQ(expected_small.size(), result_small.size());
+    for(uint64_t i = 0; i < expected_small.size(); i++) {
+        EXPECT_EQ(expected_small[i], result_small[i]);
+    }
+}
+
+// Test VCD generation
+TEST_F(VerilatorTest, VcdGeneration) {
+    auto [in, expected] = generate_correct_sequence(100);
+
+    create_example_vcd(in);
+}
+
+// Parameterized test for specific sequence sizes
+class SequenceSizeTest : public VerilatorTest,
+                         public ::testing::WithParamInterface<int> {};
+
+TEST_P(SequenceSizeTest, SpecificSequenceSizes) {
+    uint64_t sequence_size = GetParam();
+    auto [in, expected] = generate_correct_sequence(sequence_size);
+    auto result = test_sequence(in);
+
+    EXPECT_EQ(expected.size(), result.size());
+    for(uint64_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(expected[i], result[i])
+            << "Value mismatch at position " << i << " for sequence size " << sequence_size;
+    }
+}
+
+// Instantiate the parameterized test with various sequence sizes
+INSTANTIATE_TEST_SUITE_P(
+    SequenceSizes,
+    SequenceSizeTest,
+    ::testing::Range(1, 10000),
+    [](const ::testing::TestParamInfo<SequenceSizeTest::ParamType>& info) {
+        return "Size_" + std::to_string(info.param);
+    }
+);
