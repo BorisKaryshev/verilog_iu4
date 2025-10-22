@@ -3,10 +3,15 @@
 set -eou pipefail
 set -x
 
-base_path="$(pwd)"
-for path in sem*; do
-    cd $base_path/$path
+function run_test {
+    target_dir="$1"
+    cd "$1"
     cmake -B build -S .
-    cmake --build build
+    cmake --build build -j 4
     ./build/exe
+    cd -
+}
+
+for i in sem*; do
+    run_test $(realpath $i)
 done
