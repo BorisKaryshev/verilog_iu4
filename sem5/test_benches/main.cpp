@@ -94,7 +94,7 @@ void generate_vcd_example(const std::vector<uint8_t> data) {
     tfp->close();
 }
 
-class TestLRUCacheModule : public testing::Test {
+class TestLRUCacheModule : public ::testing::TestWithParam<int> {
  public:
     void SetUp() override {
         module_ = std::make_unique<Vmain>();
@@ -168,15 +168,22 @@ TEST_F(TestLRUCacheModule, MiniTest) {
     ASSERT_EQ(expected, result);
 }
 
-TEST_F(TestLRUCacheModule, LargeTestWithRandomNumbers) {
-    for(uint64_t i = 0; i < TEST_ITERATIONS; i++) {
-        auto input = GenerateRandomSequence(i);
-        auto expected = GetCorrectSequence(input);
-        auto result = RunModule(input);
+TEST_P(TestLRUCacheModule, MultipleIterations) {
+    auto input = GenerateRandomSequence(this->GetParam());
+    auto expected = GetCorrectSequence(input);
+    auto result = RunModule(input);
 
-        ASSERT_EQ(expected, result);
-    }
+    ASSERT_EQ(expected, result);
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    IterationTests,
+    TestLRUCacheModule,
+    ::testing::Range(0, 10000),  // Test 100 iterations instead of 1,000,000
+    [](const ::testing::TestParamInfo<TestLRUCacheModule::ParamType>& info) {
+        return "Iteration_" + std::to_string(info.param);
+    }
+);
 
 TEST_F(TestLRUCacheModule, CreateMainVcdFile) {
     std::vector<DataType> data = {

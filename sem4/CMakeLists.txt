@@ -49,8 +49,10 @@ endif()
 add_library(${project_name}_lib STATIC ${tb_source} ${libs})
 target_include_directories(${project_name}_lib PUBLIC ${include_locations})
 
+add_subdirectory(${PROJECT_SOURCE_DIR}/libs/googletest)
 add_executable(exe ${PROJECT_SOURCE_DIR}/test_benches/main.cpp)
 target_link_libraries(exe ${project_name}_lib)
+target_link_libraries(exe gtest_main)
 
 target_link_libraries(exe "${CMAKE_BINARY_DIR}/from_verilog.a")
 

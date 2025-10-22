@@ -128,40 +128,19 @@ void generate_example_vcd(std::uint64_t num) {
 }
 
 int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
     generate_example_vcd(NUMBER);
 
     std::uint64_t test_end = std::pow(10, 6);
 
     std::cout << "Running test for all numbers from 0 to " << test_end << std::endl;
 
-    int barWidth = 70;
     for(std::uint64_t i = 0; i < test_end; i += 1) {
         bool expected = ((i % 3) == 0);
         assert(
             test_number(i) == expected
         );
 
-        float progress = static_cast<float>(i) / static_cast<float>(test_end);
-
-        std::cout << "[";
-        int pos = barWidth * progress;
-        for (int i = 0; i < barWidth; ++i) {
-            if (i < pos) std::cout << "=";
-            else if (i == pos) std::cout << ">";
-            else std::cout << " ";
-        }
-        std::cout << "] " << int(progress * 100.0) << " %\r";
-        std::cout.flush();
-
-        progress += 0.16; // for demonstration only
     }
-    for (int i = 0; i < barWidth + 20; i++) {
-        std::cout << ' ';
-    }
-    std::cout.flush();
-    std::cout << "\r" << "Success!" << std::endl << std::endl;
-
     std::vector<std::uint64_t> numbers_to_print = {0, 1, 2, 3, 4, 9, 127, 128, 300, 30001, 3000003};
     std::cout << "Pringing some test results." << std::endl;
     std::cout << "Format: number, is_dividable_by_three, is_dividable_by_three_verilog" << std::endl;

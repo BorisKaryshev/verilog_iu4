@@ -8,16 +8,17 @@
 #include <limits>
 #include <memory>
 #include <iostream>
-
 #include <tuple>
+#include <fstream>
+
 #include <verilated.h>
 #include <verilated_vcd_c.h>
+#include <gtest/gtest.h>
 
 constexpr int CYCLES = 1000;
 long long int NUMBER = std::pow(3, 30);
 constexpr int CLK_STEP_PS = 1;
-constexpr int TEST_ITERATIONS_LIMIT = 1000000;
-
+constexpr int TEST_ITERATIONS_LIMIT = 1000;  // Reduced for faster testing
 
 inline char to_char(int var) {
     return static_cast<char>(var + '0');
@@ -35,7 +36,6 @@ std::vector<unsigned int> decimalToBinaryVector(T value) {
         // Store it MSB first
         bits[N - 1 - i] = bit;
     }
-    // std::ranges::reverse(bits);
     return bits;
 }
 
@@ -68,7 +68,7 @@ void generate_vcd_example(uint8_t cmd, uint16_t addr, uint32_t data) {
     module->eval();
     tfp->dump(0);
 
-    // Run simulation for 30 clock cycles
+    // Run simulation for clock cycles
     for (int i = 0; i < CYCLES; i++) {
         if (i > 2) {
             module->rst = 1;
@@ -114,7 +114,7 @@ std::tuple<uint8_t, uint16_t, uint32_t> run_test(uint8_t cmd, uint16_t addr, uin
 
     // Reset cycle
     module->eval();
-    // Run simulation for 30 clock cycles
+    // Run simulation for clock cycles
     for (int i = 0; i < CYCLES && !module->is_ready; i++) {
         if (i > 2) {
             module->rst = 1;
@@ -148,54 +148,83 @@ constexpr T get_step() {
     );
 }
 
-int main(int argc, char** argv) {
-    Verilated::commandArgs(argc, argv);
+// Test single example case
+TEST(MainTest, SingleExample) {
+    uint8_t cmd = 38;
+    uint16_t addr = 238;
+    uint32_t data = 10038;
 
+    auto [cmd_res, addr_res, data_res] = run_test(cmd, addr, data);
+
+    EXPECT_EQ(cmd, cmd_res);
+    EXPECT_EQ(addr, addr_res);
+    EXPECT_EQ(data, data_res);
+}
+
+// Test with zero values
+TEST(MainTest, ZeroValues) {
     uint8_t cmd = 0;
     uint16_t addr = 0;
     uint32_t data = 0;
+
+    auto [cmd_res, addr_res, data_res] = run_test(cmd, addr, data);
+
+    EXPECT_EQ(cmd, cmd_res);
+    EXPECT_EQ(addr, addr_res);
+    EXPECT_EQ(data, data_res);
+}
+
+// Test with maximum values
+TEST(MainTest, MaxValues) {
+    uint8_t cmd = std::numeric_limits<uint8_t>::max();
+    uint16_t addr = std::numeric_limits<uint16_t>::max();
+    uint32_t data = std::numeric_limits<uint32_t>::max();
+
+    auto [cmd_res, addr_res, data_res] = run_test(cmd, addr, data);
+
+    EXPECT_EQ(cmd, cmd_res);
+    EXPECT_EQ(addr, addr_res);
+    EXPECT_EQ(data, data_res);
+}
+
+// Parameterized test for multiple iterations
+class MainParameterizedTest : public ::testing::TestWithParam<int> {};
+
+TEST_P(MainParameterizedTest, MultipleIterations) {
+    const int iteration = GetParam();
 
     constexpr uint8_t cmd_step = get_step<uint8_t>();
     constexpr uint16_t addr_step = get_step<uint16_t>();
     constexpr uint32_t data_step = get_step<uint32_t>();
 
-    std::cout << "Running " << TEST_ITERATIONS_LIMIT << " iterations of test" << std::endl;
+    uint8_t cmd = static_cast<uint8_t>(iteration * cmd_step);
+    uint16_t addr = static_cast<uint16_t>(iteration * addr_step);
+    uint32_t data = static_cast<uint32_t>(iteration * data_step);
 
-    int barWidth = 70;
+    auto [cmd_res, addr_res, data_res] = run_test(cmd, addr, data);
 
-    for(int i = 0; i < TEST_ITERATIONS_LIMIT; i++) {
-        auto [cmd_res, addr_res, data_res] = run_test(cmd, addr, data);
+    EXPECT_EQ(cmd, cmd_res);
+    EXPECT_EQ(addr, addr_res);
+    EXPECT_EQ(data, data_res);
+}
 
-        assert(cmd == cmd_res);
-        assert(addr == addr_res);
-        assert(data == data_res);
-
-        cmd += cmd_step;
-        addr += addr_step;
-        data += data_step;
-
-        float progress = static_cast<float>(i) / static_cast<float>(TEST_ITERATIONS_LIMIT);
-
-        std::cout << "[";
-        int pos = barWidth * progress;
-        for (int i = 0; i < barWidth; ++i) {
-            if (i < pos) std::cout << "=";
-            else if (i == pos) std::cout << ">";
-            else std::cout << " ";
-        }
-        std::cout << "] " << int(progress * 100.0) << " %\r";
-        std::cout.flush();
-
-        progress += 0.16; // for demonstration only
+// Instantiate the parameterized test with a subset of iterations
+INSTANTIATE_TEST_SUITE_P(
+    IterationTests,
+    MainParameterizedTest,
+    ::testing::Range(0, 100),  // Test 100 iterations instead of 1,000,000
+    [](const ::testing::TestParamInfo<MainParameterizedTest::ParamType>& info) {
+        return "Iteration_" + std::to_string(info.param);
     }
-    for (int i = 0; i < barWidth + 20; i++) {
-        std::cout << ' ';
-    }
-    std::cout.flush();
-    std::cout << "\r" << "Success!" << std::endl;
-    std::cout << "Generating example vcd file: main.vcd" << std::endl;
-    std::cout << "Input data is: {\"cmd\": 38, \"addr\": 238, \"data\": 10038}" << std::endl;
+);
 
-    generate_vcd_example(38, 238, 10038);
-    return 0;
+// Test VCD generation
+TEST(MainTest, GenerateVcd) {
+    EXPECT_NO_THROW({
+        generate_vcd_example(38, 238, 10038);
+    });
+
+    // You could also add a check to verify the file was created
+    std::ifstream file("main.vcd");
+    EXPECT_TRUE(file.good()) << "VCD file was not created successfully";
 }

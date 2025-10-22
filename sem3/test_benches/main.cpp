@@ -155,8 +155,6 @@ int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
 
     const uint64_t seq_size_step = std::max(static_cast<uint64_t>(1), static_cast<uint64_t>(MAX_SEQ_SIZE / N_OF_SEQ_SIZES));
-    std::cout << "Running test for " << N_OF_TESTS << " random sequeces with sizes from 1 to " << MAX_SEQ_SIZE << " with step " << seq_size_step << std::endl;
-    int barWidth = 70;
     for(std::uint64_t i = 1; i < N_OF_TESTS; i++) {
         for(std::uint64_t j = i; j < MAX_SEQ_SIZE; j += seq_size_step) {
             auto [in, expected] = generate_correct_sequence(j);
@@ -167,26 +165,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        float progress = static_cast<float>(i) / static_cast<float>(N_OF_TESTS);
-
-        std::cout << "[";
-        int pos = barWidth * progress;
-        for (int i = 0; i < barWidth; ++i) {
-            if (i < pos) std::cout << "=";
-            else if (i == pos) std::cout << ">";
-            else std::cout << " ";
-        }
-        std::cout << "] " << int(progress * 100.0) << " %\r";
-        std::cout.flush();
-
-        progress += 0.16; // for demonstration only
     }
-    for (int i = 0; i < barWidth + 20; i++) {
-        std::cout << ' ';
-    }
-    std::cout.flush();
-    std::cout << "\r" << "Success!" << std::endl << std::endl;
-
     std::cout << "Running test for large sequence with 1.000.000 elements" << std::endl;
     {
         auto [in, expected] = generate_correct_sequence(1000000);
@@ -198,26 +177,6 @@ int main(int argc, char** argv) {
     }
     std::cout << "Success!" << std::endl << std::endl;
 
-    std::vector<uint8_t> input_seq = {0, 1, 2, 3, 5, 7, 12};
-    std::vector<uint8_t> expected = {0};
-    for(auto i : input_seq) {
-        expected.push_back(
-            A * expected.back() + B * i
-        );
-    }
-    auto result = test_sequence(input_seq);
-    std::cout << "Pringing some test results." << std::endl;
-    std::cout << "Format:" << std::endl << "x\tgot\texpected" << std::endl;
-
-    for(uint64_t i = 0; i < std::max(expected.size(), result.size()); i++) {
-        std::stringstream stream;
-        if(i < input_seq.size()) {
-            stream << static_cast<int>(input_seq[i]);
-        } else {
-            stream << '-';
-        }
-        std::cout << stream.str() << '\t' << static_cast<int>(result[i]) << '\t' << static_cast<int>(expected[i]) << std::endl;
-    }
     create_example_vcd(input_seq);
 
     return 0;
