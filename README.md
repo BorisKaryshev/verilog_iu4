@@ -45,5 +45,3 @@ git submodule update --init
 ./scripts/cleanup.sh
 ```
 Очистка удаляет артефакты сборки, скомпилированные бинари и vcd файлы.
-
-test
