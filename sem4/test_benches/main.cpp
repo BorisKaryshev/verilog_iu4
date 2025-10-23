@@ -212,7 +212,7 @@ TEST_P(MainParameterizedTest, MultipleIterations) {
 INSTANTIATE_TEST_SUITE_P(
     IterationTests,
     MainParameterizedTest,
-    ::testing::Range(0, 100),  // Test 100 iterations instead of 1,000,000
+    ::testing::Range(0, 100000),  // Test 100 iterations instead of 1,000,000
     [](const ::testing::TestParamInfo<MainParameterizedTest::ParamType>& info) {
         return "Iteration_" + std::to_string(info.param);
     }

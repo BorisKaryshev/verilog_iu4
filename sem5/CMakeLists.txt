@@ -59,12 +59,13 @@ target_link_libraries(exe gtest_main)
 
 target_compile_options(exe PRIVATE -O3)
 target_compile_options(${project_name}_lib PRIVATE -O3)
+target_compile_options(gtest_main PRIVATE -O3)
 
 find_program(VERILATOR "verilator")
 add_custom_target(
     VERILATOR ALL
     COMMAND verilator
-    -Wall --cc --trace --build
+    -Wall --cc --trace --build -O3
     --top ${top_module}
     -I${PROJECT_SOURCE_DIR}/src
     ${source} && bash ${PROJECT_SOURCE_DIR}/link_all_in_one.sh ${CMAKE_BINARY_DIR}

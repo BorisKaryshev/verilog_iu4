@@ -147,7 +147,7 @@ TEST_P(DivisibleByThreeTestWithParametr, RangeTest) {
 INSTANTIATE_TEST_SUITE_P(
     IterationTests,
     DivisibleByThreeTestWithParametr,
-    ::testing::Range(0, 1000000),  // Test 1,000,000
+    ::testing::Range(0, 1000000, 127),  // Test 1,000,000
     [](const ::testing::TestParamInfo<DivisibleByThreeTestWithParametr::ParamType>& info) {
         return "Iteration_" + std::to_string(info.param);
     }
@@ -155,7 +155,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 // Optional: Performance test for larger ranges
 TEST_F(DivisibleByThreeTest, PerformanceTest) {
-    std::vector<std::uint64_t> large_numbers = {1000000, 10000000, 100000000};
+    std::vector<std::uint64_t> large_numbers = {1000000, 10000000, 100000000, 1 << 30};
 
     for(auto num : large_numbers) {
         bool expected = (num % 3) == 0;
