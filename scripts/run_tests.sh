@@ -3,15 +3,33 @@
 set -eou pipefail
 set -x
 
-function run_test {
-    target_dir="$1"
+build ()
+{
     cd "$1"
     cmake -B build -S .
     cmake --build build -j 6
+    cd -
+}
+
+run_test ()
+{
+    target_dir="$1"
+    cd "$1"
     ./build/exe
     cd -
 }
 
-export -f run_test
+export -f build
 
-find semester_1 -maxdepth 1 | xargs -I{} -P 10 bash -c "run_test {}"
+projects=$(echo -e "                     \
+                 semester_1/sem2_task2\n \
+                 semester_1/sem3\n       \
+                 semester_1/sem4\n       \
+                 semester_1/sem5\n       \
+")
+
+printf '%s' "$projects" | xargs -I{} -P 10 bash -c "set -x; build {}"
+
+for i in $(echo $projects); do
+    run_test "$i"
+done
