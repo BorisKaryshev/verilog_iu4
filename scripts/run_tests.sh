@@ -7,11 +7,11 @@ function run_test {
     target_dir="$1"
     cd "$1"
     cmake -B build -S .
-    cmake --build build -j 4
+    cmake --build build -j 6
     ./build/exe
     cd -
 }
 
-for i in sem*; do
-    run_test $(realpath $i)
-done
+export -f run_test
+
+find semester_1 -maxdepth 1 | xargs -I{} -P 10 bash -c "run_test {}"

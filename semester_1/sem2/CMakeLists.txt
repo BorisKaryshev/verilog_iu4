@@ -56,6 +56,7 @@ target_link_libraries(exe "${CMAKE_BINARY_DIR}/from_verilog.a")
 
 target_compile_options(exe PRIVATE -O3)
 target_compile_options(${project_name}_lib PRIVATE -O3)
+target_compile_options(gtest_main PRIVATE -O3)
 
 find_program(VERILATOR "verilator")
 add_custom_target(

@@ -7,18 +7,18 @@ set(project_name verilator)
 project(${project_name})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(tb_source
+    ${PROJECT_SOURCE_DIR}/test_benches/sample.cpp
+)
+
 set(
     top_module
     main
 )
 set(source
     ${PROJECT_SOURCE_DIR}/src/main.v
+    ${PROJECT_SOURCE_DIR}/src/counter_by_module_three.v
 )
-
-set(tb_source
-    ${PROJECT_SOURCE_DIR}/test_benches/sample.cpp
-)
-
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(libs
@@ -46,18 +46,22 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     )
 endif()
 
+
+
 add_library(${project_name}_lib STATIC ${tb_source} ${libs})
 target_include_directories(${project_name}_lib PUBLIC ${include_locations})
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/libs/googletest)
 add_executable(exe ${PROJECT_SOURCE_DIR}/test_benches/main.cpp)
 target_link_libraries(exe ${project_name}_lib)
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/libs/googletest)
 target_link_libraries(exe gtest_main)
 
 target_link_libraries(exe "${CMAKE_BINARY_DIR}/from_verilog.a")
 
 target_compile_options(exe PRIVATE -O3)
 target_compile_options(${project_name}_lib PRIVATE -O3)
+target_compile_options(gtest_main PRIVATE -O3)
 
 find_program(VERILATOR "verilator")
 add_custom_target(

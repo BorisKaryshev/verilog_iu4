@@ -5,16 +5,16 @@
 # Навигация
 
 ## **ДЗ 1**
-- [Отчет](sem3/README.md)
-- [Код](sem3/src/)
+- [Отчет](semester_1/sem3/README.md)
+- [Код](semester_1/sem3/src/)
 
 ## **ДЗ 2**
-- [Отчет](sem4/README.md)
-- [Код](sem4/src/)
+- [Отчет](semester_1/sem4/README.md)
+- [Код](semester_1/sem4/src/)
 
 ## **ДЗ 3**
-- [Отчет](sem5/README.md)
-- [Код](sem5/src/)
+- [Отчет](semester_1/sem5/README.md)
+- [Код](semester_1/sem5/src/)
 
 # Зависимости
 Для сборки требуются:

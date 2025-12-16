@@ -1,5 +1,5 @@
 module encoder #(
-    parameter WIDTH = 8
+    parameter WIDTH = 16000
 ) (
     input [WIDTH - 1:0] onehot_in,
     output [$clog2(WIDTH) - 1:0] binary_out
