@@ -3,18 +3,27 @@
 
 
 # Навигация
-
-## **ДЗ 1**
+## Семестр 1
+### **ДЗ 1**
 - [Отчет](semester_1/sem3/README.md)
 - [Код](semester_1/sem3/src/)
 
-## **ДЗ 2**
+### **ДЗ 2**
 - [Отчет](semester_1/sem4/README.md)
 - [Код](semester_1/sem4/src/)
 
-## **ДЗ 3**
+### **ДЗ 3**
 - [Отчет](semester_1/sem5/README.md)
 - [Код](semester_1/sem5/src/)
+
+## Семестр 2
+### **ДЗ 1**
+- [Отчет](semester_2/task_1/README.md)
+- [Код](semester_2/task_1/src/)
+
+### **ДЗ 2**
+- [Отчет](semester_2/task_2/README.md)
+- [Код](semester_2/task_2/src/)
 
 # Зависимости
 Для сборки требуются:
