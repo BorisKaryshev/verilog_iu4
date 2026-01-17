@@ -26,6 +26,8 @@ projects=$(echo -e "                     \
                  semester_1/sem3\n       \
                  semester_1/sem4\n       \
                  semester_1/sem5\n       \
+                 semester_2/task_1\n       \
+                 semester_2/task_2\n       \
 ")
 
 printf '%s' "$projects" | xargs -I{} -P 10 bash -c "set -x; build {}"
