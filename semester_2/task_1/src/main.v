@@ -1,56 +1,59 @@
 module main #(
-    parameter CACHE_SIZE = 7,
-    parameter VAR_WIDTH = 8
+    parameter WORD_WIDTH = 8
 ) (
     input clk,
     input rst,
-    input [VAR_WIDTH - 1:0] x,
-    output reg [VAR_WIDTH - 1:0] cache [0:CACHE_SIZE - 1]
+
+    input [WORD_WIDTH - 1:0] in,
+    input ready_m, // low for true
+    input in_enable, // low fo true
+
+    output [WORD_WIDTH - 1:0] out,
+    output ready_s, // low for true
+    output read_ready // low for true
 );
+    reg [WORD_WIDTH - 1:0] first_buffer;
+    reg [WORD_WIDTH - 1:0] second_buffer;
+    assign out = first_buffer;
 
-    wire [CACHE_SIZE - 1:0] encoder_in;
-    wire [$clog2(CACHE_SIZE) - 1:0] encoder_out;
-    encoder #(
-        .WIDTH(CACHE_SIZE)
-    ) local_encoder (
-        .onehot_in(encoder_in),
-        .binary_out(encoder_out)
-    );
+    reg ready_buffer;
+    assign ready_s = ready_buffer;
 
-    genvar i;
-    generate
-        for (i = 0; i < CACHE_SIZE; i = i + 1) begin : encoder_input_creation
-            assign encoder_in[i] = (cache[i] == x);
-        end
-    endgenerate
+    reg [1:0] n_of_elements;
+
+    assign read_ready = !(n_of_elements != 2'b00);
 
     always @(posedge clk) begin
         if(!rst) begin
-            cache[0] <= 0;
+            first_buffer <= 0;
+            n_of_elements <= 0;
+            second_buffer <= 0;
+            ready_buffer <= 0;
         end else begin
-            cache[0] <= x;
-        end
-    end
-
-    generate
-        for (i = 1; i < CACHE_SIZE - 1; i = i + 1) begin : cache_shift
-            always @(posedge clk) begin
-                if(!rst) begin
-                    cache[i] <= 0;
-                end else if((encoder_in == 0) || i <= encoder_out) begin
-                    cache[i] <= cache[i - 1];
+            if(!ready_m) begin
+                if(n_of_elements == 2'b10) begin
+                    n_of_elements <= 2'b01;
+                    first_buffer <= second_buffer;
+                end else if (n_of_elements == 2'b01) begin
+                    first_buffer <= in;
+                end else if(n_of_elements == 2'b00) begin
+                    first_buffer <= in;
+                    n_of_elements <= 2'b01;
                 end
             end
-        end
-    endgenerate
-
-    always @(posedge clk) begin
-        if(!rst) begin
-            cache[CACHE_SIZE - 1] <= 0;
-/* verilator lint_off WIDTHEXPAND */
-        end else if((encoder_in == 0) || encoder_out == (CACHE_SIZE - 1)) begin
-/* verilator lint_on WIDTHEXPAND */
-            cache[CACHE_SIZE - 1] <= cache[CACHE_SIZE - 2];
+            else begin
+                if(n_of_elements == 2'b00) begin
+                    first_buffer <= second_buffer;
+                    second_buffer <= in;
+                    n_of_elements <= n_of_elements + 2'b01;
+                end
+                else if(n_of_elements == 2'b01) begin
+                    first_buffer <= second_buffer;
+                    second_buffer <= in;
+                    n_of_elements <= n_of_elements + 2'b01;
+                    ready_buffer <= 1'b1;
+                end
+            end
         end
     end
 

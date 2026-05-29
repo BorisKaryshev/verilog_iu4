@@ -3,9 +3,7 @@
 #include <array>
 #include <limits>
 #include <memory>
-#include <sstream>
 #include <vector>
-#include <iostream>
 #include <random>
 
 #include <verilated.h>
@@ -78,14 +76,17 @@ void generate_vcd_example(const std::vector<uint8_t> data) {
 
     // Run simulation for 30 clock cycles
     for (int i = 0; i < CYCLES; i++) {
-        if(!module->clk && module->rst && it != data.end()) {
-            module->x = *it;
+        if(!module->clk && module->rst && it != data.end() && module->ready_s) {
+            module->in = *it;
             it = std::next(it);
         }
         if (i > 2) {
             module->rst = 1;
         }
         module->clk = (i % 2);
+        if (i % 4) {
+            module->ready_m = !(module->ready_m);
+        }
         module->eval();
         tfp->dump(i * CLK_STEP_PS + CLK_STEP_PS);  // Trace at mid-cycle
     }
@@ -94,7 +95,7 @@ void generate_vcd_example(const std::vector<uint8_t> data) {
     tfp->close();
 }
 
-class TestLRUCacheModule : public ::testing::TestWithParam<int> {
+class TestSkidBufferCacheModule : public ::testing::TestWithParam<int> {
  public:
     void SetUp() override {
         module_ = std::make_unique<Vmain>();
@@ -119,14 +120,13 @@ class TestLRUCacheModule : public ::testing::TestWithParam<int> {
 
         for(auto i : data) {
             module_->clk = 1;
-            module_->x = i;
+            module_->in = i;
             callback(module_);
 
             module_->clk = 0;
             callback(module_);
 
             std::array<DataType, CACHE_SIZE> current {};
-            std::ranges::copy(module_->cache, current.begin());
             res.push_back(current);
         }
 
@@ -144,6 +144,7 @@ class TestLRUCacheModule : public ::testing::TestWithParam<int> {
 
 };
 
+/*
 TEST_F(TestLRUCacheModule, TestWithOnes) {
     std::vector<DataType> input(1000, 1);
     auto expected = GetCorrectSequence(input);
@@ -185,15 +186,21 @@ INSTANTIATE_TEST_SUITE_P(
     }
 );
 
-TEST_F(TestLRUCacheModule, CreateMainVcdFile) {
-    std::vector<DataType> data = {
-        1, 2, 3, 4, 5, 6, 7, 3, 3, 3, 4, 2, 1, 1, 1, 1, 1, 1
-    };
+*/
 
+TEST_F(TestSkidBufferCacheModule, CreateMainVcdFile) {
+    std::vector<DataType> data;
+    data.reserve(1024);
+    for (DataType i = 0; i < std::numeric_limits<DataType>::max(); i++) {
+        data.push_back(i);
+    }
+
+    generate_vcd_example(data);
+    return;
 
     Verilated::traceEverOn(true);
     auto tfp = std::make_unique<VerilatedVcdC>();
-    module_->trace(tfp.get(), 99);
+    module_->trace(tfp.get(), 300);
     tfp->open("main.vcd");
 
     uint64_t simulation_step = 0;
