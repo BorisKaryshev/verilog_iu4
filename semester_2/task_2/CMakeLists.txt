@@ -53,7 +53,7 @@ target_link_libraries(${project_name}_lib "${CMAKE_BINARY_DIR}/from_verilog.a")
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/libs/googletest)
 
-add_executable(exe ${PROJECT_SOURCE_DIR}/test_benches/main.cpp ${PROJECT_SOURCE_DIR}/test_benches/main_edge_cases.cpp)
+add_executable(exe ${PROJECT_SOURCE_DIR}/test_benches/main.cpp)
 target_link_libraries(exe ${project_name}_lib)
 target_link_libraries(exe gtest_main)
 

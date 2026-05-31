@@ -1,4 +1,4 @@
-module main #(
+module axi_skid_buffer #(
     parameter DATA_WIDTH = 8
 ) (
     input wire clk,
