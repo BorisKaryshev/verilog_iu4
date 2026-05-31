@@ -13,10 +13,8 @@
 
 ## Решение
 
+[Код решения](src/main.v)
 
 ## Проверка корректности
 
 ![Скриншот из GTKWave](images_for_report/signals_from_gtkwave.jpeg "Скриншот из GTKWave")
-
-
-Код тестов лежит [тут](test_benches/main.cpp)
